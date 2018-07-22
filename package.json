@@ -1,0 +1,15 @@
+{
+  "name": "hg-server",
+  "version": "0.0.0",
+  "description": "HgServer",
+  "main": "server.js",
+  "author": {
+    "name": "Cesar Jaimes"
+  },
+  "dependencies": {
+    "angular": "^1.7.2",
+    "express": "^4.16.3",
+    "socket.io": "^2.1.1",
+    "websocket": "^1.0.26"
+  }
+}
