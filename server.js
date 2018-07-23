@@ -10,7 +10,7 @@ var globalIdCounter = 0;
 var chatIdCounter = 0;
 var gameStatesEnum = Object.freeze({
     CREATING_GAME: 0,
-    AWAITING_PLAYERS: 1,
+    AWAITING_PLAYERS_TO_JOIN: 1,
     STARTING_GAME: 2,
     AWAITING_PLAYER_INPUT: 3,
     COMPUTING_TURN_OUTCOME: 4,
@@ -237,9 +237,17 @@ var fsmSwOBject = function () {
 };
 var gameInstanceBluePrint = function ( _id) {
     var id = _id;
+    const GAME_TICKS = 250;
+    const TURN_LENGTH = 15000;
+    var turn = 0;
+    var maxTurn = 15;
     var gameState = gameStatesEnum.CREATING_GAME;
-    this.getId = () => { return id; };
+    var turnTimer;
+    var turnTickCounter = 0;
     var playerList = [];
+
+    this.getId = () => { return id; };
+    
     this.addPlayer = player => playerList.push(player);
     this.removePlayer = player => {
         player.connection.hasJoinedGame = false;
@@ -253,15 +261,25 @@ var gameInstanceBluePrint = function ( _id) {
             player.connection.gameId = -1;
         });
     };
-    var gameTurn = 0;
     this.startGame = function () {
-        this.broadcast('sup homie');
-        while (gameTurn < 10) {
-            gameTurn++;
-            
-            //setTimeout(this.broadcast('sup homie'), 2500);
+        if(gameState === gameStatesEnum.CREATING_GAME){
+            gameState = gameStatesEnum.AWAITING_PLAYER_INPUT;
+
         }
+        turnTimer = setInterval(this.checkForPlayerInput, GAME_TICKS);
     };
+
+    this.checkForPlayerInput = function() {
+        if(turnTickCounter < TURN_LENGTH / GAME_TICKS){
+            turnTickCounter++;
+            return;
+        }
+        else{
+            gameState = gameStatesEnum.COMPUTING_TURN_OUTCOME;
+            //call function to compute outcome
+            clearInterval(turnTimer);
+        }
+    }
 
     this.broadcast = function (broadcastMessage) {
         playerList.forEach(function (player) {
@@ -271,6 +289,7 @@ var gameInstanceBluePrint = function ( _id) {
 };
 var createPlayer = function (client) {
     this.connection = client;
+    this.hasPlayed = false;
     //data from DB further down the line
     this.xPos = 0;
     this.yPos = 0;
