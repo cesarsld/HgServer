@@ -278,7 +278,7 @@ var gameInstanceBluePrint = function ( _id) {
     this.startGame = function () {
         if(gameState === gameStatesEnum.CREATING_GAME){
             gameState = gameStatesEnum.AWAITING_PLAYER_INPUT;
-            this.broadcast('Awaiting player input.');
+            this.broadcast('Awaiting ' + TURN_LENGTH / 1000 + 'seconds for player input.');
             turnTimer = setInterval(this.checkForPlayerInput, GAME_TICKS);
         }
         else console.log('Game already started.');
