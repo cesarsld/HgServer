@@ -19,6 +19,12 @@ var gameStatesEnum = Object.freeze({
     SENDING_REWARDS: 7,
     CLOSING_GAME: 8
 });
+//create a function that returns a json to be ready to send
+var messageTypesEnum = Object.freeze({
+    GAME_GLOBAL_NOTIFICATION: 0,
+    GAME_PERSONAL_NOTIFICAITON: 1,
+    GAME_CHAT_MESSAGE:2, 
+});
 var chatRoom = function (_id) {
     var id = _id;
     this.getId = () => { return id; };
@@ -105,12 +111,19 @@ wsServer.on('request', function (request) {
             chatRoomInstances[0].broadcastFromClient(this, message);
         }
 
+        if (body.startsWith('/game'))
+        {
+            body.slice(6);
+            this.input = body;
+
+        }
 
         if (body.startsWith('/createGame')) {
             if (!this.hasJoinedGame) {
                 let gameInstance = new gameInstanceBluePrint(globalIdCounter++);
                 awaitingGameInstances.push(gameInstance);
-                awaitingGameInstances[0].addPlayer(new createPlayer(this));
+                this.player = new createPlayer(this);
+                awaitingGameInstances[0].addPlayer(client.player);
                 this.hasJoinedGame = true;
                 this.gameId = awaitingGameInstances[0].getId();
                 this.send('Game created and joined.');
@@ -138,12 +151,13 @@ wsServer.on('request', function (request) {
                     return _gameInstance.getId() === gameId;
                 });
                 if (gameInstance) {
-                    gameInstance.broadcast('This message should only be seen by players who joined.');
+                    gameInstance.broadcast('Starting game.');
                     runningGameInstances.push(gameInstance);
                     gameInstance.startGame();
                     let index = awaitingGameInstances.indexOf(gameInstance);
                     awaitingGameInstances.splice(index, 1);
                 }
+                
                 else this.send('Game Instance not found.');
             }
             else this.send('User has not joined a game.');
@@ -264,23 +278,47 @@ var gameInstanceBluePrint = function ( _id) {
     this.startGame = function () {
         if(gameState === gameStatesEnum.CREATING_GAME){
             gameState = gameStatesEnum.AWAITING_PLAYER_INPUT;
-
+            this.broadcast('Awaiting player input.');
+            turnTimer = setInterval(this.checkForPlayerInput, GAME_TICKS);
         }
-        turnTimer = setInterval(this.checkForPlayerInput, GAME_TICKS);
+        else console.log('Game already started.');
     };
 
     this.checkForPlayerInput = function() {
-        if(turnTickCounter < TURN_LENGTH / GAME_TICKS){
+        if(turnTickCounter < TURN_LENGTH / GAME_TICKS && gameState === gameStatesEnum.AWAITING_PLAYER_INPUT){
             turnTickCounter++;
             return;
         }
         else{
-            gameState = gameStatesEnum.COMPUTING_TURN_OUTCOME;
-            //call function to compute outcome
             clearInterval(turnTimer);
+            turnTickCounter = 0;
+            gameState = gameStatesEnum.COMPUTING_TURN_OUTCOME;
+            turn++;
+            this.broadcast('Executing turn ' + turn + '.');
+            executeGame(playerList);
+            this.checkForNextState();
         }
     }
-
+    this.checkForNextState = function(){
+        switch(gameState){
+            case gameStatesEnum.COMPUTING_TURN_OUTCOME:
+                if(turn < maxTurn){
+                    gameState = gameStatesEnum.AWAITING_PLAYER_INPUT;
+                    turnTimer = setInterval(this.checkForPlayerInput, GAME_TICKS);
+                }
+                else {
+                    gameState = gameStatesEnum.ENDING_GAME;
+                    //endGameFunction in future
+                    playerList.forEach(function(player){
+                        player.client.send('Game ended.\n Player coordinates : X = ' + player.xPos + '; Y = ' + player.yPos);
+                    });
+                    gameState = gameStatesEnum.ENDING_GAME;
+                    this.broadcast('Game will be removed.');
+                    removeGameInstace(this);
+                }
+                break;
+        }
+    };
     this.broadcast = function (broadcastMessage) {
         playerList.forEach(function (player) {
             player.connection.send(broadcastMessage);
@@ -295,6 +333,44 @@ var createPlayer = function (client) {
     this.yPos = 0;
 };
 
+function executeGame(gameInstance)
+{
+
+    gameInstance.playerList.forEach(function (player){
+        switch(player.client.input){
+            case 'up':
+                player.yPos++;
+                break;
+            case 'down':
+                player.yPos--;
+                break;
+            case 'right':
+                player.xPos++;
+                break;
+            case 'left':
+                player.xPos--;
+                break;
+        }
+        player.client.input = '';
+        player.connection.send('Player coordinates : X = ' + player.xPos + '; Y = ' + player.yPos);
+    });
+
+}
+function convertToJson (msgType, obj)
+{
+    var data = {
+        messageType : msgType,
+        data : obj
+    };
+    var jsonFile = JSON.stringify(data);
+    return jsonFile;
+}
+function removeGameInstace (gameInstance){
+    var index = runningGameInstances.indexOf(gameInstance);
+    runningGameInstances.splice(index,1);
+    this.releasePlayers();
+    console.log('Game instace [' + gameInstance.getId() + '] removed.');
+}
 
 var getHelp = () => {
     var message = '\nGame commands:\n' +
