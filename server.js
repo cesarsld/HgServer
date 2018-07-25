@@ -24,7 +24,10 @@ var gameStatesEnum = Object.freeze({
 var messageTypesEnum = Object.freeze({
     GAME_GLOBAL_NOTIFICATION: 0,
     GAME_PERSONAL_NOTIFICAITON: 1,
-    GAME_CHAT_MESSAGE:2
+    GAME_CHAT_MESSAGE: 2,
+    LOGIN: 3,
+    INFO_PLAYER_DATA: 4
+
 });
 var chatRoom = function (_id) {
     var id = _id;
@@ -77,106 +80,114 @@ wsServer.on('request', function (request) {
     var index = clients.push(connection) - 1;
 
     connection.on('message', function (message) {
-        this.requestCount++;
-        console.log('From client [' + index + ']' + 'request : ' + this.requestCount + ' ' + message.utf8Data);
-        var body = message.utf8Data;
-        if (body.startsWith('sw.')) {
-            var transition = body.slice(3);
-            var info = this.sw.handle(transition);
-            this.send(info);
-        } else if (body === 'time') this.send('Time elapsed : ' + this.sw.getTimeElapsed());
-
-        if (body.startsWith('/help')) {
-            this.send(getHelp());
-        }
-
-        if (body.startsWith('/nick')) {
-            let name = body.slice(6);
-            this.nickname = name;
-            this.send(name + ' set as nickname. ');
-        }
-
-        if (body.startsWith('/joinChat')) {
-            chatRoomInstances[0].globalBroadcast(this.nickname + ' joined the chat room.');
-            chatRoomInstances[0].addClient(this);
-            this.send('Joined chat.');
-        }
-        // change when several chats exist
-        if (body.startsWith('/leaveChat')) {
-            chatRoomInstances[0].removeClient(this);
-            chatRoomInstances[0].globalBroadcast(this.nickname + ' left the chat room.');
-            this.send('Exited chat.');
-        }
-        if (body.startsWith('/chat')) {
-            let message = body.slice(6);
-            chatRoomInstances[0].broadcastFromClient(this, message);
-        }
-
-        if (body.startsWith('/game'))
-        {
-            let _input = body.slice(6);
-            this.input = _input;
-            this.send('Input received : ' + this.input);
-        }
-
-        if (body.startsWith('/createGame')) {
-            if (!this.hasJoinedGame) {
-                let gameInstance = new gameInstanceBluePrint(globalIdCounter++);
-                let id = gameInstance.getId();
-                awaitingGameInstances[id] = gameInstance;
-                this.player = new createPlayer();
-                awaitingGameInstances[id].addClient(this);
-                this.hasJoinedGame = true;
-                this.gameId = id;
-                idList.push(id);
-                this.send('Game created and joined.');
+        if (message.utf8Data) {
+            this.requestCount++;
+            console.log('From client [' + index + ']' + 'request : ' + this.requestCount + ' ' + message.utf8Data);
+            // new query method
+            var requestObject = convertToObject(message.utf8Data);
+            switch (requestObject.messageType) {
+                default:
+                    break;
             }
-            else this.send('Player has already joined a game');
-        }
+            //
+            var body = message.utf8Data;
+            if (body.startsWith('sw.')) {
+                var transition = body.slice(3);
+                var info = this.sw.handle(transition);
+                this.send(info);
+            } else if (body === 'time') this.send('Time elapsed : ' + this.sw.getTimeElapsed());
 
-        if (body.startsWith('/joinGame')) {
-            if (awaitingGameInstances.length > 0) {
+            if (body.startsWith('/help')) {
+                this.send(getHelp());
+            }
+
+            if (body.startsWith('/nick')) {
+                let name = body.slice(6);
+                this.nickname = name;
+                this.send(name + ' set as nickname. ');
+            }
+
+            if (body.startsWith('/joinChat')) {
+                chatRoomInstances[0].globalBroadcast(this.nickname + ' joined the chat room.');
+                chatRoomInstances[0].addClient(this);
+                this.send('Joined chat.');
+            }
+            // change when several chats exist
+            if (body.startsWith('/leaveChat')) {
+                chatRoomInstances[0].removeClient(this);
+                chatRoomInstances[0].globalBroadcast(this.nickname + ' left the chat room.');
+                this.send('Exited chat.');
+            }
+            if (body.startsWith('/chat')) {
+                let message = body.slice(6);
+                chatRoomInstances[0].broadcastFromClient(this, message);
+            }
+
+            if (body.startsWith('/game')) {
+                let _input = body.slice(6);
+                this.input = _input;
+                this.send('Input received : ' + this.input);
+            }
+
+            if (body.startsWith('/createGame')) {
                 if (!this.hasJoinedGame) {
+                    let gameInstance = new gameInstanceBluePrint(globalIdCounter++);
+                    let id = gameInstance.getId();
+                    awaitingGameInstances[id] = gameInstance;
                     this.player = new createPlayer();
-                    awaitingGameInstances[idList[0]].addClient(this);
+                    awaitingGameInstances[id].addClient(this);
                     this.hasJoinedGame = true;
-                    this.gameId = idList[0];
-                    this.send('Game joined.');
+                    this.gameId = id;
+                    idList.push(id);
+                    this.send('Game created and joined.');
                 }
-                else this.send('User joined game already.');
+                else this.send('Player has already joined a game');
             }
-            //fallback to create game later
-            else this.send('No games currently running. Please create game');
-        }
-        if (body.startsWith('/startGame')) {
-            if (this.hasJoinedGame) {
-                let gameId = this.gameId;
-                let gameInstance = awaitingGameInstances[gameId];
-                //let gameInstance = awaitingGameInstances.find(function (_gameInstance) {
-                //    return _gameInstance.getId() === gameId;
-                //});
-                if (gameInstance) {
-                    gameInstance.broadcast('Starting game.');
-                    runningGameInstances[gameId] = gameInstance;
-                    gameInstance.startGame();
-                    delete awaitingGameInstances[gameId];
+
+            if (body.startsWith('/joinGame')) {
+                if (awaitingGameInstances.length > 0) {
+                    if (!this.hasJoinedGame) {
+                        this.player = new createPlayer();
+                        awaitingGameInstances[idList[0]].addClient(this);
+                        this.hasJoinedGame = true;
+                        this.gameId = idList[0];
+                        this.send('Game joined.');
+                    }
+                    else this.send('User joined game already.');
                 }
-                
-                else this.send('Game Instance not found.');
+                //fallback to create game later
+                else this.send('No games currently running. Please create game');
             }
-            else this.send('User has not joined a game.');
-        }
-        if (body.startsWith('/deleteGame')) {
-            if (this.hasJoinedGame) {
-                let gameId = this.gameId;
-                let gameInstance = awaitingGameInstances[gameId];
-                if (gameInstance) {
-                    gameInstance.broadcast('Game instance will be removed.');
-                    gameInstance.releaseClients();
-                    delete awaitingGameInstances[gameId];
-                } else this.send('Could not find game.');
+            if (body.startsWith('/startGame')) {
+                if (this.hasJoinedGame) {
+                    let gameId = this.gameId;
+                    let gameInstance = awaitingGameInstances[gameId];
+                    //let gameInstance = awaitingGameInstances.find(function (_gameInstance) {
+                    //    return _gameInstance.getId() === gameId;
+                    //});
+                    if (gameInstance) {
+                        gameInstance.broadcast('Starting game.');
+                        runningGameInstances[gameId] = gameInstance;
+                        gameInstance.startGame();
+                        delete awaitingGameInstances[gameId];
+                    }
+
+                    else this.send('Game Instance not found.');
+                }
+                else this.send('User has not joined a game.');
             }
-            else this.send('User has not joined a game.');
+            if (body.startsWith('/deleteGame')) {
+                if (this.hasJoinedGame) {
+                    let gameId = this.gameId;
+                    let gameInstance = awaitingGameInstances[gameId];
+                    if (gameInstance) {
+                        gameInstance.broadcast('Game instance will be removed.');
+                        gameInstance.releaseClients();
+                        delete awaitingGameInstances[gameId];
+                    } else this.send('Could not find game.');
+                }
+                else this.send('User has not joined a game.');
+            }
         }
     });
 
@@ -372,6 +383,10 @@ function convertToJson (msgType, obj)
     };
     var jsonFile = JSON.stringify(data);
     return jsonFile;
+}
+
+function convertToObject(json) {
+    return JSON.parse(json);
 }
 function removeGameInstace (gameInstance){
     gameInstance.releaseClients();
