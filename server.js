@@ -26,7 +26,12 @@ var messageTypesEnum = Object.freeze({
     GAME_PERSONAL_NOTIFICAITON: 1,
     GAME_CHAT_MESSAGE: 2,
     LOGIN: 3,
-    INFO_PLAYER_DATA: 4
+    INFO_PLAYER_DATA: 4,
+    CHANGE_NICKNAME : 5,
+    REQUEST_JOIN_GAME: 6,
+    REQUEST_CREATE_GAME : 7,
+    ERROR_LOG: 8,
+    ECHO : 9
 
 });
 var chatRoom = function (_id) {
@@ -85,9 +90,45 @@ wsServer.on('request', function (request) {
             console.log('From client [' + index + ']' + 'request : ' + this.requestCount + ' ' + message.utf8Data);
             // new query method
             var requestObject = convertToObject(message.utf8Data);
-            switch (requestObject.messageType) {
-                default:
-                    break;
+            if(requestObject){
+                switch (requestObject.messageType) {
+                    case messageTypesEnum.CHANGE_NICKNAME:
+                        this.nickname = requestObject.body;
+                        this.send(this.nickname + ' set as nickname. ');
+                        break;
+                    case messageTypesEnum.LOGIN:
+                        break;
+                    case messageTypesEnum.REQUEST_CREATE_GAME:
+                        if (!this.hasJoinedGame) {
+                            let gameInstance = new gameInstanceBluePrint(globalIdCounter++);
+                            let id = gameInstance.getId();
+                            awaitingGameInstances[id] = gameInstance;
+                            this.player = new createPlayer();
+                            awaitingGameInstances[id].addClient(this);
+                            this.hasJoinedGame = true;
+                            this.gameId = id;
+                            idList.push(id);
+                            this.send('Game created and joined.');
+                        }
+                        else this.send('Player has already joined a game');
+                        break;
+                    case messageTypesEnum.REQUEST_JOIN_GAME:
+                        if (awaitingGameInstances.length > 0) {
+                            if (!this.hasJoinedGame) {
+                                this.player = new createPlayer();
+                                awaitingGameInstances[idList[0]].addClient(this);
+                                this.hasJoinedGame = true;
+                                this.gameId = idList[0];
+                                this.send('Game joined.');
+                            }
+                            else this.send('User joined game already.');
+                        }
+                        //fallback to create game later
+                        else this.send('No games currently running. Please create game');
+                        break;
+                    default:
+                        break;
+                }
             }
             //
             var body = message.utf8Data;
