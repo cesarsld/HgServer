@@ -20,7 +20,6 @@ var gameStatesEnum = Object.freeze({
     SENDING_REWARDS: 7,
     CLOSING_GAME: 8
 });
-//create a function that returns a json to be ready to send
 var messageTypesEnum = Object.freeze({
     GAME_GLOBAL_NOTIFICATION: 0,
     GAME_PERSONAL_NOTIFICAITON: 1,
@@ -32,7 +31,6 @@ var messageTypesEnum = Object.freeze({
     REQUEST_CREATE_GAME : 7,
     ERROR_LOG: 8,
     ECHO : 9
-
 });
 var chatRoom = function (_id) {
     var id = _id;
@@ -49,14 +47,19 @@ var chatRoom = function (_id) {
         client.chatRoomId.splice(index, 1);
     };
     this.globalBroadcast = function (broadcastMessage) {
+        objToSend = convertToJson(messageTypesEnum.GAME_CHAT_MESSAGE, '[GLOBAL] ' + broadcastMessage)
         subscribedClients.forEach(function (client) {
-            client.send('[GLOBAL] ' + broadcastMessage);
+            client.send(objToSend);
         });
     };
     this.broadcastFromClient = function (_client, broadcastMessage) {
+        var message = {};
+        message.author = _client.nickname;
+        message.content = broadcastMessage;
+        var objToSend = convertToJson(messageTypesEnum.GAME_CHAT_MESSAGE, objToSend);
         subscribedClients.forEach(function (client) {
             if (client !== _client)
-                client.send('[' + _client.nickname + '] ' + broadcastMessage);
+                client.send(objToSend);
         });
     };
 };
@@ -125,6 +128,9 @@ wsServer.on('request', function (request) {
                         }
                         //fallback to create game later
                         else this.send('No games currently running. Please create game');
+                        break;
+                    case messageTypesEnum.ECHO:
+                        this.send('ping');
                         break;
                     default:
                         break;
@@ -385,9 +391,33 @@ var gameInstanceBluePrint = function (_id) {
 var createPlayer = function () {
     this.hasPlayed = false;
     //data from DB further down the line
+    // hunger range 0 - 100
+    this.hunger = 75;
+    // stress range 0 - 100
+    this.stress = 25;
+    //energy range 0 - 100
+    this.energy = 80;
+    //sanity range 0 - 100
+    this.sanity = 5;
     this.xPos = 0;
     this.yPos = 0;
+
+    this.dropAtRandom = (xMax, yMax) => {
+        this.xPos = Math.floor(Math.random() * xMax);
+        this.yPos = Math.floor(Math.random() * yMax);
+    };
 };
+
+function createRandomMap(playerCount){
+    var map = [];
+    const SQUARES_PER_PLAYER = 15
+    var tileCount = playerCount * SQUARES_PER_PLAYER;
+    var size = Math.ceil(Math.sqrt(tileCount));
+    for (let i = 0 ; i < size ; i++)
+    {
+        //do something with map
+    }
+}
 function broadcast(message, users) {
     users.forEach(function (user) {
         user.send(message);
