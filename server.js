@@ -47,7 +47,7 @@ var chatRoom = function (_id) {
         client.chatRoomId.splice(index, 1);
     };
     this.globalBroadcast = function (broadcastMessage) {
-        objToSend = convertToJson(messageTypesEnum.GAME_CHAT_MESSAGE, '[GLOBAL] ' + broadcastMessage)
+        objToSend = convertToJson(messageTypesEnum.GAME_CHAT_MESSAGE, '[GLOBAL] ' + broadcastMessage);
         subscribedClients.forEach(function (client) {
             client.send(objToSend);
         });
@@ -410,12 +410,14 @@ var createPlayer = function () {
 
 function createRandomMap(playerCount){
     var map = [];
-    const SQUARES_PER_PLAYER = 15
+    const SQUARES_PER_PLAYER = 15;
     var tileCount = playerCount * SQUARES_PER_PLAYER;
     var size = Math.ceil(Math.sqrt(tileCount));
-    for (let i = 0 ; i < size ; i++)
+    for (let i = 0; i < size; i++)
     {
-        //do something with map
+        for (let j = 0; j < size; j++) {
+            //do something with map
+        }
     }
 }
 function broadcast(message, users) {
