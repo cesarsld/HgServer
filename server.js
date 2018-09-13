@@ -239,7 +239,7 @@ wsServer.on('request', function (request) {
     });
 
     connection.on('close', function (reasonCode, desc) {
-        
+
         //console.log('Client disconnected. Reason (if given)' + desc);
         //var index = clients.findIndex(connection);
         //clients.splice(index, 1);
@@ -249,7 +249,7 @@ wsServer.on('request', function (request) {
 wsServer.on('close', function (socketConnection, reason, desc) {
     var i = clients.indexOf(socketConnection);
     clients.splice(i, 1);
-    
+
     console.log('Client closed connection. Reason : ' + desc);
 });
 
@@ -322,7 +322,7 @@ var gameInstanceBluePrint = function (_id) {
     var clientList = [];
 
     this.getId = () => { return id; };
-    
+
     this.addClient = client => clientList.push(client);
     this.removeClient = client => {
         client.hasJoinedGame = false;
@@ -410,12 +410,19 @@ var createPlayer = function () {
 
 function createRandomMap(playerCount){
     var map = [];
+    var mapSquare = function (x, y, lootQuality, terrainType){
+        this.x = x;
+        this.y = y;
+        this.lootQuality = lootQuality;
+        this.terrainType = terrainType;
+    };
     const SQUARES_PER_PLAYER = 15
     var tileCount = playerCount * SQUARES_PER_PLAYER;
     var size = Math.ceil(Math.sqrt(tileCount));
     for (let i = 0 ; i < size ; i++)
     {
         //do something with map
+
     }
 }
 function broadcast(message, users) {

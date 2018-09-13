@@ -23,3 +23,9 @@ $RECYCLE.BIN/
 # =========================
 
 node_modules
+.idea
+.vscode
+
+*.iml
+
+
