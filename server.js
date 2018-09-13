@@ -22,7 +22,7 @@ var gameStatesEnum = Object.freeze({
 });
 var messageTypesEnum = Object.freeze({
     GAME_GLOBAL_NOTIFICATION: 0,
-    GAME_PERSONAL_NOTIFICAITON: 1,
+    GAME_PERSONAL_NOTIFICATION: 1,
     GAME_CHAT_MESSAGE: 2,
     LOGIN: 3,
     INFO_PLAYER_DATA: 4,
@@ -47,7 +47,7 @@ var chatRoom = function (_id) {
         client.chatRoomId.splice(index, 1);
     };
     this.globalBroadcast = function (broadcastMessage) {
-        objToSend = convertToJson(messageTypesEnum.GAME_CHAT_MESSAGE, '[GLOBAL] ' + broadcastMessage)
+        objToSend = convertToJson(messageTypesEnum.GAME_CHAT_MESSAGE, '[GLOBAL] ' + broadcastMessage);
         subscribedClients.forEach(function (client) {
             client.send(objToSend);
         });
@@ -410,6 +410,7 @@ var createPlayer = function () {
 
 function createRandomMap(playerCount){
     var map = [];
+<<<<<<< HEAD
     var mapSquare = function (x, y, lootQuality, terrainType){
         this.x = x;
         this.y = y;
@@ -417,12 +418,21 @@ function createRandomMap(playerCount){
         this.terrainType = terrainType;
     };
     const SQUARES_PER_PLAYER = 15
+=======
+    const SQUARES_PER_PLAYER = 15;
+>>>>>>> origin/master
     var tileCount = playerCount * SQUARES_PER_PLAYER;
     var size = Math.ceil(Math.sqrt(tileCount));
-    for (let i = 0 ; i < size ; i++)
+    for (let i = 0; i < size; i++)
     {
+<<<<<<< HEAD
         //do something with map
 
+=======
+        for (let j = 0; j < size; j++) {
+            //do something with map
+        }
+>>>>>>> origin/master
     }
 }
 function broadcast(message, users) {
